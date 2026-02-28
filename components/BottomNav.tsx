@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 
 const navItems = [
   {
@@ -51,7 +52,12 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-200 bg-white/80 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/80">
+    <motion.nav
+      initial={{ y: 80 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-200/50 glass-strong dark:border-zinc-800/50"
+    >
       <div className="mx-auto flex max-w-lg items-center justify-around">
         {navItems.map((item) => {
           const active = isActive(item.href);
@@ -59,21 +65,44 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 pt-3 transition-colors ${
+              className="relative flex flex-1 flex-col items-center gap-0.5 py-2 pt-3"
+            >
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.85 }}
+                className={`transition-colors duration-200 ${
+                  active
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300'
+                }`}
+              >
+                {item.icon(active)}
+              </motion.div>
+              <span className={`text-[10px] font-medium transition-colors duration-200 ${
                 active
                   ? 'text-indigo-600 dark:text-indigo-400'
-                  : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-              }`}
-            >
-              {item.icon(active)}
-              <span className="text-[10px] font-medium">{item.label}</span>
+                  : 'text-zinc-400 dark:text-zinc-500'
+              }`}>
+                {item.label}
+              </span>
               {active && (
-                <div className="absolute top-0 h-0.5 w-8 rounded-full bg-indigo-600 dark:bg-indigo-400" />
+                <motion.div
+                  layoutId="bottomNavIndicator"
+                  className="absolute top-0 h-[2px] w-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500"
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              )}
+              {active && (
+                <motion.div
+                  layoutId="bottomNavGlow"
+                  className="absolute -top-3 w-16 h-16 rounded-full bg-indigo-500/5 blur-xl pointer-events-none"
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
               )}
             </Link>
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 }
