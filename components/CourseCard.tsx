@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Course } from '@/lib/types';
 
@@ -36,13 +37,37 @@ export default function CourseCard({ course, progress, index = 0 }: CourseCardPr
   const moduleCount = course.modules?.length || 5;
   const completedCount = progress?.completed_modules?.length || 0;
   const progressPercent = moduleCount > 0 ? Math.round((completedCount / moduleCount) * 100) : 0;
+  const [saved, setSaved] = useState(false);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+      className="relative"
     >
+      {/* Save button */}
+      <motion.button
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSaved(!saved); }}
+        whileTap={{ scale: 0.85 }}
+        whileHover={{ scale: 1.1 }}
+        className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm border border-zinc-200/60 dark:border-zinc-700/60 transition-colors"
+        aria-label={saved ? 'Rimuovi dai salvati' : 'Salva corso'}
+      >
+        <motion.svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill={saved ? 'currentColor' : 'none'}
+          stroke="currentColor"
+          strokeWidth={1.75}
+          className={`w-4 h-4 transition-colors ${saved ? 'text-indigo-500' : 'text-zinc-400'}`}
+          animate={{ scale: saved ? [1, 1.3, 1] : 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
+        </motion.svg>
+      </motion.button>
+
       <Link
         href={`/learn/${course.id}`}
         className="group block rounded-2xl border border-zinc-200/80 bg-white p-4 transition-all duration-300 hover:border-indigo-300/60 hover:shadow-xl hover:shadow-indigo-500/10 active:scale-[0.98] dark:border-zinc-800/80 dark:bg-zinc-900/80 dark:hover:border-indigo-700/50 card-shine"
@@ -105,7 +130,7 @@ export default function CourseCard({ course, progress, index = 0 }: CourseCardPr
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
                 transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
-                className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+                className="h-1.5 rounded-full progress-bar-glow bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
               />
             </div>
           </div>

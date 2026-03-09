@@ -44,7 +44,7 @@ export default function Home() {
       <TopBar />
       <PageTransition>
         {/* Hero Section with particles */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 px-5 py-10 text-white">
+        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 px-5 py-10 text-white lg:rounded-2xl lg:mx-0 lg:mt-2">
           <FloatingParticles count={15} color="#ffffff" />
           
           {/* Decorative blobs */}
@@ -254,7 +254,7 @@ export default function Home() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.8 + i * 0.05 }}
                   whileHover={{ scale: 1.1, y: -2 }}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-sm hover:shadow-md transition-shadow cursor-default"
+                  className="chip-glow inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-sm hover:shadow-md transition-shadow cursor-default"
                 >
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tech.color }} />
                   {tech.name}

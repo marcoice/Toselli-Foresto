@@ -9,6 +9,23 @@
   --glow-secondary: rgba(139, 92, 246, 0.15);
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.2);
+  /* Desktop layout vars */
+  --sidebar-w: 72px;
+  --right-sidebar-w: 0px;
+  --feed-max: 470px;
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --sidebar-w: 240px;
+    --right-sidebar-w: 320px;
+  }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  :root {
+    --sidebar-w: 72px;
+    --right-sidebar-w: 0px;
+  }
 }
 
 @theme inline {
@@ -27,9 +44,7 @@
   }
 }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
   background: var(--background);
@@ -40,14 +55,25 @@ body {
   overflow-x: hidden;
 }
 
-::selection {
-  background: rgba(99, 102, 241, 0.3);
-  color: inherit;
+/* Desktop Instagram-style feed centering */
+.desktop-feed {
+  margin-left: var(--sidebar-w);
+  padding-right: var(--right-sidebar-w);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
 }
+.desktop-feed > main {
+  width: 100%;
+  max-width: var(--feed-max);
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+::selection { background: rgba(99, 102, 241, 0.3); color: inherit; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #6366f1, #8b5cf6);
   border-radius: 4px;
@@ -353,3 +379,172 @@ body {
 
 /* Focus ring */
 .focus-ring:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px #6366f1; }
+
+/* ── Ultra-modern TikTok/Instagram-inspired additions ── */
+
+/* Gradient animated border on cards */
+@keyframes border-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Vibrant neon glow effects */
+.neon-indigo { box-shadow: 0 0 8px #6366f1, 0 0 20px rgba(99, 102, 241, 0.3), 0 0 40px rgba(99, 102, 241, 0.1); }
+.neon-pink { box-shadow: 0 0 8px #ec4899, 0 0 20px rgba(236, 72, 153, 0.3), 0 0 40px rgba(236, 72, 153, 0.1); }
+.neon-purple { box-shadow: 0 0 8px #8b5cf6, 0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.1); }
+
+/* Card magnetic hover */
+.card-magnetic {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+}
+
+/* Frosted depth glass */
+.glass-deep {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(110%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  .glass-deep {
+    background: rgba(9, 9, 11, 0.7);
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+}
+
+/* Pulse ring for important CTAs */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  80%, 100% { transform: scale(1.5); opacity: 0; }
+}
+.pulse-ring::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  border: 2px solid currentColor;
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  pointer-events: none;
+}
+
+/* Gradient underline hover effect */
+.gradient-underline {
+  position: relative;
+}
+.gradient-underline::after {
+  content: '';
+  position: absolute; bottom: -2px; left: 0; width: 0; height: 2px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gradient-underline:hover::after { width: 100%; }
+
+/* Story-style ring on avatars */
+.story-ring {
+  background: linear-gradient(135deg, #f72585, #7209b7, #3a0ca3, #4361ee, #4cc9f0);
+  padding: 2px;
+  border-radius: 50%;
+}
+.story-ring-inner {
+  background: white;
+  border-radius: 50%;
+  padding: 2px;
+}
+@media (prefers-color-scheme: dark) {
+  .story-ring-inner { background: #09090b; }
+}
+
+/* Progress bar with gradient+glow */
+.progress-bar-glow {
+  position: relative;
+  overflow: visible;
+}
+.progress-bar-glow::after {
+  content: '';
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 6px 2px rgba(99, 102, 241, 0.6);
+}
+
+/* Micro-interaction: button press */
+.btn-press {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.btn-press:active {
+  transform: scale(0.96) translateY(1px);
+  box-shadow: none !important;
+}
+
+/* Smooth number transition */
+.number-transition {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Desktop sidebar nav item text */
+@media (min-width: 1280px) {
+  .sidebar-label { display: block; }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .sidebar-label { display: none; }
+}
+
+/* Stacked card effect */
+.card-stack {
+  position: relative;
+}
+.card-stack::before, .card-stack::after {
+  content: '';
+  position: absolute;
+  border-radius: inherit;
+  border: 1px solid rgba(99, 102, 241, 0.08);
+}
+.card-stack::before {
+  inset: -4px;
+  z-index: -1;
+  background: rgba(99, 102, 241, 0.02);
+}
+.card-stack::after {
+  inset: -8px;
+  z-index: -2;
+  background: rgba(99, 102, 241, 0.01);
+}
+
+/* Rich text gradient headings */
+.heading-gradient {
+  background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 50%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+@media (prefers-color-scheme: dark) {
+  .heading-gradient {
+    background: linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 50%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* Tag/chip pill with glow */
+.chip-glow {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.chip-glow:hover {
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+  transform: scale(1.05) translateY(-1px);
+}
+
+/* Desktop page container refinement */
+@media (min-width: 1024px) {
+  .desktop-feed {
+    background: transparent;
+  }
+  .desktop-feed > main {
+    background: transparent;
+  }
+}

@@ -127,3 +127,101 @@ export interface PlatformStats {
   total_quizzes: number;
   total_users: number;
 }
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  actor_id: number | null;
+  type: 'system' | 'badge' | 'job' | 'follow' | 'like' | 'comment' | 'message';
+  title: string;
+  body: string | null;
+  link: string | null;
+  is_read: number;
+  created_at: string;
+  actor_username?: string;
+  actor_name?: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  unread_count: number;
+}
+
+export interface Post {
+  id: number;
+  user_id: number;
+  content: string;
+  image_url: string | null;
+  post_type: string;
+  tags: string[];
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+  username?: string;
+  display_name?: string;
+  avatar_color?: string;
+}
+
+// Auth types
+export interface AuthUser {
+  id: number;
+  email: string;
+  role: 'worker' | 'company';
+  display_name: string;
+  username: string;
+  avatar_color: string;
+  title: string;
+  bio: string;
+  company_name: string | null;
+  company_website: string | null;
+  lat: number | null;
+  lng: number | null;
+  city: string;
+  region: string;
+  country: string;
+  created_at: string;
+}
+
+export interface AuthSession {
+  user: AuthUser;
+  token: string;
+}
+
+export interface Listing {
+  id: number;
+  author_id: number;
+  listing_type: 'job_offer' | 'service_proposal';
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  work_type: string;
+  salary_min: number | null;
+  salary_max: number | null;
+  tags: string[];
+  lat: number | null;
+  lng: number | null;
+  city: string;
+  region: string;
+  country: string;
+  is_active: number;
+  created_at: string;
+  // Joined fields
+  author_name?: string;
+  author_username?: string;
+  author_avatar_color?: string;
+  author_role?: string;
+  author_company_name?: string;
+}
+
+export interface MapPoint {
+  id: number;
+  lat: number;
+  lng: number;
+  listing_type: 'job_offer' | 'service_proposal';
+  title: string;
+  city: string;
+  category: string;
+  author_name: string;
+  author_role: string;
+}

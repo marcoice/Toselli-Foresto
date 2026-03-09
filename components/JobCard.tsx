@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { Job } from '@/lib/types';
 
@@ -30,6 +30,8 @@ const levelLabels: Record<string, string> = {
 };
 
 export default function JobCard({ job, onSelect, index = 0 }: JobCardProps) {
+  const [saved, setSaved] = useState(false);
+
   const daysAgo = useMemo(() => {
     const now = typeof window !== 'undefined' ? Date.now() : new Date().getTime();
     return Math.floor(
@@ -47,7 +49,7 @@ export default function JobCard({ job, onSelect, index = 0 }: JobCardProps) {
       whileHover={{ y: -3, boxShadow: '0 20px 40px -10px rgba(99, 102, 241, 0.12)' }}
       whileTap={{ scale: 0.98 }}
       onClick={() => onSelect?.(job)}
-      className="w-full text-left rounded-2xl border border-zinc-200/80 bg-white p-4 transition-colors duration-300 hover:border-indigo-300/60 dark:border-zinc-800/80 dark:bg-zinc-900/80 dark:hover:border-indigo-700/50 card-shine"
+      className="w-full text-left rounded-2xl border border-zinc-200/80 bg-white p-4 transition-all duration-300 hover:border-indigo-300/60 dark:border-zinc-800/80 dark:bg-zinc-900/80 dark:hover:border-indigo-700/50 card-shine group"
     >
       <div className="flex items-start gap-3">
         {/* Company logo */}
@@ -65,16 +67,38 @@ export default function JobCard({ job, onSelect, index = 0 }: JobCardProps) {
           <h3 className="font-semibold text-zinc-900 dark:text-white truncate">{job.title}</h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">{job.company}</p>
         </div>
-        {daysAgo <= 1 && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 500 }}
-            className="px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold shadow-lg shadow-indigo-500/25"
+        <div className="flex items-center gap-1.5 shrink-0">
+          {daysAgo <= 1 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 500 }}
+              className="px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold shadow-lg shadow-indigo-500/25"
+            >
+              NEW
+            </motion.span>
+          )}
+          <motion.button
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.85 }}
+            onClick={(e) => { e.stopPropagation(); setSaved(s => !s); }}
+            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            aria-label={saved ? 'Rimuovi dai salvati' : 'Salva offerta'}
           >
-            NEW
-          </motion.span>
-        )}
+            <motion.svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill={saved ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              strokeWidth={1.5}
+              className={`w-4 h-4 transition-colors ${saved ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-400'}`}
+              animate={saved ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.35 }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
+            </motion.svg>
+          </motion.button>
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">

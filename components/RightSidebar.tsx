@@ -1,0 +1,184 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { getStats, getJobs, getCourses } from '@/lib/api';
+import type { PlatformStats, Job, Course } from '@/lib/types';
+import { AnimatedCounter } from '@/lib/animations';
+
+const trendingTechs = [
+  { name: 'React', color: '#61dafb', jobs: 47 },
+  { name: 'TypeScript', color: '#3178c6', jobs: 38 },
+  { name: 'Next.js', color: '#000000', jobs: 29 },
+  { name: 'AWS', color: '#ff9900', jobs: 62 },
+  { name: 'Docker', color: '#2496ed', jobs: 34 },
+];
+
+export default function RightSidebar() {
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      getStats().catch(() => null),
+      getJobs().catch(() => []),
+      getCourses().catch(() => []),
+    ]).then(([s, j, c]) => {
+      setStats(s);
+      setJobs(j.slice(0, 3));
+      setCourses(c.slice(0, 2));
+    });
+  }, []);
+
+  return (
+    <aside className="hidden xl:flex flex-col gap-4 fixed top-0 right-0 h-full overflow-y-auto py-6 px-4 scrollbar-hide"
+      style={{ width: 'var(--right-sidebar-w)' }}
+    >
+      {/* Platform Stats */}
+      {stats && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl border border-zinc-200/60 bg-white/80 dark:bg-zinc-900/80 dark:border-zinc-800/60 backdrop-blur-sm p-4 shadow-sm"
+        >
+          <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">Piattaforma</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: 'Posizioni', value: stats.jobs, icon: '💼', color: 'from-blue-500/10 to-indigo-500/10' },
+              { label: 'Corsi', value: stats.courses, icon: '📚', color: 'from-purple-500/10 to-pink-500/10' },
+              { label: 'Utenti', value: stats.users, icon: '👥', color: 'from-emerald-500/10 to-teal-500/10' },
+              { label: 'Badge', value: stats.badges_awarded, icon: '🏅', color: 'from-amber-500/10 to-orange-500/10' },
+            ].map((item, i) => (
+              <motion.div
+                key={item.label}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 + i * 0.05 }}
+                className={`rounded-xl bg-gradient-to-br ${item.color} p-3 border border-zinc-200/40 dark:border-zinc-700/40`}
+              >
+                <div className="text-lg">{item.icon}</div>
+                <div className="text-lg font-black text-zinc-900 dark:text-white mt-1">
+                  <AnimatedCounter value={Number(item.value)} duration={1} />
+                </div>
+                <div className="text-[10px] text-zinc-500 font-medium">{item.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Trending Jobs */}
+      {jobs.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-2xl border border-zinc-200/60 bg-white/80 dark:bg-zinc-900/80 dark:border-zinc-800/60 backdrop-blur-sm p-4 shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Posizioni recenti</h3>
+            <Link href="/jobs" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">vedi tutte</Link>
+          </div>
+          <div className="space-y-3">
+            {jobs.map((job, i) => (
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 + i * 0.08 }}
+                whileHover={{ x: 3 }}
+                className="flex items-center gap-3 group cursor-pointer"
+              >
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white shadow-sm"
+                  style={{ background: `linear-gradient(135deg, ${job.logo_color || '#6366f1'}, ${job.logo_color || '#8b5cf6'}aa)` }}
+                >
+                  {job.company?.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{job.title}</p>
+                  <p className="text-[10px] text-zinc-500 truncate">{job.company} · {job.location}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Trending Technologies */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="rounded-2xl border border-zinc-200/60 bg-white/80 dark:bg-zinc-900/80 dark:border-zinc-800/60 backdrop-blur-sm p-4 shadow-sm"
+      >
+        <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">Tech Trending</h3>
+        <div className="space-y-2">
+          {trendingTechs.map((tech, i) => (
+            <motion.div
+              key={tech.name}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 + i * 0.06 }}
+              whileHover={{ x: 3 }}
+              className="flex items-center justify-between group cursor-default"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tech.color }} />
+                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">{tech.name}</span>
+              </div>
+              <span className="text-[10px] text-zinc-400 font-medium">{tech.jobs} job</span>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Featured Courses */}
+      {courses.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="rounded-2xl border border-zinc-200/60 bg-white/80 dark:bg-zinc-900/80 dark:border-zinc-800/60 backdrop-blur-sm p-4 shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Corsi consigliati</h3>
+            <Link href="/learn" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">vedi tutti</Link>
+          </div>
+          <div className="space-y-3">
+            {courses.map((course, i) => (
+              <motion.div
+                key={course.id}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 + i * 0.08 }}
+              >
+                <Link href={`/learn/${course.id}`} className="flex items-center gap-3 group">
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm shadow-sm"
+                    style={{ background: `linear-gradient(135deg, ${course.badge_color || '#6366f1'}33, ${course.badge_color || '#8b5cf6'}55)`, border: `1px solid ${course.badge_color || '#6366f1'}44` }}
+                  >
+                    📚
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{course.title}</p>
+                    <p className="text-[10px] text-zinc-500 truncate">{course.level} · {course.duration}</p>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Footer */}
+      <div className="text-[10px] text-zinc-400 px-1 pb-4">
+        <p>© 2026 DevHub IT · Tutti i diritti riservati</p>
+        <p className="mt-1">Piattaforma per professionisti IT italiani</p>
+      </div>
+    </aside>
+  );
+}

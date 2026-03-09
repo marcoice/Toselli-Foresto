@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
+import NotificationPanel from './NotificationPanel';
 
 const pageTitles: Record<string, string> = {
   '/': 'DevHub IT',
@@ -30,7 +31,7 @@ export default function TopBar({ onFilterToggle, showFilter }: TopBarProps) {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-200/50 glass-strong dark:border-zinc-800/50"
+      className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-200/50 glass-strong dark:border-zinc-800/50 lg:hidden"
     >
       <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2.5">
@@ -42,7 +43,6 @@ export default function TopBar({ onFilterToggle, showFilter }: TopBarProps) {
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-5 h-5">
               <path fillRule="evenodd" d="M14.447 3.027a.75.75 0 0 1 .527.92l-4.5 16.5a.75.75 0 0 1-1.448-.394l4.5-16.5a.75.75 0 0 1 .921-.526ZM16.72 6.22a.75.75 0 0 1 1.06 0l5.25 5.25a.75.75 0 0 1 0 1.06l-5.25 5.25a.75.75 0 1 1-1.06-1.06L21.44 12l-4.72-4.72a.75.75 0 0 1 0-1.06Zm-9.44 0a.75.75 0 0 1 0 1.06L2.56 12l4.72 4.72a.75.75 0 0 1-1.06 1.06L.97 12.53a.75.75 0 0 1 0-1.06l5.25-5.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
             </svg>
-            {/* Animated ring */}
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 opacity-0 animate-glow-pulse" />
           </motion.div>
           <motion.h1
@@ -71,15 +71,7 @@ export default function TopBar({ onFilterToggle, showFilter }: TopBarProps) {
               </svg>
             </motion.button>
           )}
-          <motion.button
-            whileHover={{ scale: 1.05, backgroundColor: 'rgba(99, 102, 241, 0.1)' }}
-            whileTap={{ scale: 0.9 }}
-            className="notification-dot flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors dark:text-zinc-300"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-            </svg>
-          </motion.button>
+          <NotificationPanel />
         </div>
       </div>
     </motion.header>

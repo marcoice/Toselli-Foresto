@@ -1,6 +1,6 @@
 // DevHub IT - API Client Library
 
-import type { Job, JobFilters, Course, Quiz, QuizResult, User, UserBadge, UserProgress, PlatformStats } from './types';
+import type { Job, JobFilters, Course, Quiz, QuizResult, User, UserBadge, UserProgress, PlatformStats, NotificationsResponse, AuthUser, AuthSession, Listing, MapPoint } from './types';
 
 const API_BASE = '/api';
 
@@ -84,4 +84,60 @@ export async function updateModuleProgress(userId: number, courseId: number, mod
 // Stats
 export async function getStats(): Promise<PlatformStats> {
   return fetchAPI<PlatformStats>('/stats');
+}
+
+// Notifications
+export async function getNotifications(userId = 1): Promise<NotificationsResponse> {
+  return fetchAPI<NotificationsResponse>(`/notifications?user_id=${userId}`);
+}
+
+export async function markNotificationsRead(userId = 1, notificationId?: number): Promise<{ success: boolean }> {
+  return fetchAPI<{ success: boolean }>('/notifications', {
+    method: 'PATCH',
+    body: JSON.stringify({ user_id: userId, ...(notificationId ? { notification_id: notificationId } : {}) }),
+  });
+}
+
+// Auth
+export async function registerUser(data: {
+  email: string; password: string; role: string;
+  display_name: string; username: string;
+  city: string; region?: string; lat?: number; lng?: number;
+  company_name?: string; company_website?: string;
+}): Promise<AuthSession> {
+  return fetchAPI<AuthSession>('/auth/register', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function loginUser(email: string, password: string): Promise<AuthSession> {
+  return fetchAPI<AuthSession>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+}
+
+export async function getMe(): Promise<{ user: AuthUser | null }> {
+  return fetchAPI<{ user: AuthUser | null }>('/auth/me');
+}
+
+export async function logoutUser(): Promise<{ success: boolean }> {
+  return fetchAPI<{ success: boolean }>('/auth/me', { method: 'DELETE' });
+}
+
+// Listings (user-published)
+export async function getListings(filters?: { type?: string; category?: string; city?: string }): Promise<Listing[]> {
+  const params = new URLSearchParams();
+  if (filters) {
+    Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+  }
+  const q = params.toString();
+  return fetchAPI<Listing[]>(`/listings${q ? `?${q}` : ''}`);
+}
+
+export async function createListing(data: Partial<Listing>): Promise<{ id: number; success: boolean }> {
+  return fetchAPI<{ id: number; success: boolean }>('/listings', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getMapPoints(type?: string): Promise<MapPoint[]> {
+  const q = type ? `?type=${type}` : '';
+  return fetchAPI<MapPoint[]>(`/listings/map${q}`);
 }

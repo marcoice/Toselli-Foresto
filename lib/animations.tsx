@@ -306,7 +306,7 @@ export function AnimatedProgressBar({
         initial={{ width: 0 }}
         animate={{ width: `${value}%` }}
         transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-        className="h-full rounded-full"
+        className="h-full rounded-full progress-bar-glow"
         style={{ background: `linear-gradient(90deg, ${gradientFrom}, ${gradientTo})` }}
       />
     </div>
