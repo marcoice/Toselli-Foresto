@@ -50,6 +50,17 @@ const migrations = [
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (author_id) REFERENCES auth_users(id)
   )`,
+
+  // Separate credentials table for email/password storage
+  `CREATE TABLE IF NOT EXISTS user_credentials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES auth_users(id)
+  )`,
 ];
 
 for (const sql of migrations) {

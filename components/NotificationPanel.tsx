@@ -131,7 +131,7 @@ export default function NotificationPanel() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-zinc-200/60 bg-white/95 shadow-2xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/95"
+            className="absolute left-0 top-12 z-50 w-80 rounded-2xl border border-zinc-200/60 bg-white/95 shadow-2xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/95 lg:left-0 lg:right-auto"
           >
             <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
               <h3 className="font-bold text-zinc-900 dark:text-white">Notifiche</h3>

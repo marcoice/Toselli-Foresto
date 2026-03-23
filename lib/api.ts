@@ -137,7 +137,10 @@ export async function createListing(data: Partial<Listing>): Promise<{ id: numbe
   });
 }
 
-export async function getMapPoints(type?: string): Promise<MapPoint[]> {
-  const q = type ? `?type=${type}` : '';
-  return fetchAPI<MapPoint[]>(`/listings/map${q}`);
+export async function getMapPoints(type?: string, region?: string): Promise<MapPoint[]> {
+  const params = new URLSearchParams();
+  if (type) params.set('type', type);
+  if (region) params.set('region', region);
+  const q = params.toString();
+  return fetchAPI<MapPoint[]>(`/listings/map${q ? `?${q}` : ''}`);
 }

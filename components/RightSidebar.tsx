@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { getStats, getJobs, getCourses } from '@/lib/api';
-import type { PlatformStats, Job, Course } from '@/lib/types';
+import { getStats, getListings, getCourses } from '@/lib/api';
+import type { PlatformStats, Listing, Course } from '@/lib/types';
 import { AnimatedCounter } from '@/lib/animations';
 
 const trendingTechs = [
@@ -17,17 +17,17 @@ const trendingTechs = [
 
 export default function RightSidebar() {
   const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
 
   useEffect(() => {
     Promise.all([
       getStats().catch(() => null),
-      getJobs().catch(() => []),
+      getListings().catch(() => []),
       getCourses().catch(() => []),
-    ]).then(([s, j, c]) => {
+    ]).then(([s, l, c]) => {
       setStats(s);
-      setJobs(j.slice(0, 3));
+      setListings(l.slice(0, 3));
       setCourses(c.slice(0, 2));
     });
   }, []);
@@ -70,8 +70,8 @@ export default function RightSidebar() {
         </motion.div>
       )}
 
-      {/* Trending Jobs */}
-      {jobs.length > 0 && (
+      {/* Recent Listings */}
+      {listings.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -79,13 +79,13 @@ export default function RightSidebar() {
           className="rounded-2xl border border-zinc-200/60 bg-white/80 dark:bg-zinc-900/80 dark:border-zinc-800/60 backdrop-blur-sm p-4 shadow-sm"
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Posizioni recenti</h3>
-            <Link href="/jobs" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">vedi tutte</Link>
+            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Annunci recenti</h3>
+            <Link href="/listings" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">vedi tutti</Link>
           </div>
           <div className="space-y-3">
-            {jobs.map((job, i) => (
+            {listings.map((listing, i) => (
               <motion.div
-                key={job.id}
+                key={listing.id}
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + i * 0.08 }}
@@ -94,13 +94,13 @@ export default function RightSidebar() {
               >
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white shadow-sm"
-                  style={{ background: `linear-gradient(135deg, ${job.logo_color || '#6366f1'}, ${job.logo_color || '#8b5cf6'}aa)` }}
+                  style={{ background: `linear-gradient(135deg, ${listing.author_avatar_color || '#6366f1'}, ${listing.author_avatar_color || '#8b5cf6'}aa)` }}
                 >
-                  {job.company?.charAt(0).toUpperCase()}
+                  {(listing.author_name || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{job.title}</p>
-                  <p className="text-[10px] text-zinc-500 truncate">{job.company} · {job.location}</p>
+                  <p className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{listing.title}</p>
+                  <p className="text-[10px] text-zinc-500 truncate">{listing.author_name}{listing.city ? ` · ${listing.city}` : ''}</p>
                 </div>
               </motion.div>
             ))}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import TopBar from '@/components/TopBar';
 import CourseCard from '@/components/CourseCard';
+import AuthGuard from '@/components/AuthGuard';
 import { PageTransition } from '@/lib/animations';
 import { getCourses, getUserProgress } from '@/lib/api';
 import type { Course, UserProgress } from '@/lib/types';
@@ -53,7 +54,7 @@ export default function LearnPage() {
   };
 
   return (
-    <>
+    <AuthGuard>
       <TopBar />
       <PageTransition>
         {/* Header */}
@@ -192,6 +193,6 @@ export default function LearnPage() {
           )}
         </div>
       </PageTransition>
-    </>
+    </AuthGuard>
   );
 }

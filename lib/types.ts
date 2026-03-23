@@ -221,7 +221,14 @@ export interface MapPoint {
   listing_type: 'job_offer' | 'service_proposal';
   title: string;
   city: string;
+  region: string;
   category: string;
+  description: string;
+  level: string;
+  work_type: string;
+  salary_min: number | null;
+  salary_max: number | null;
   author_name: string;
   author_role: string;
+  author_avatar_color: string;
 }

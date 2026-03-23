@@ -3,19 +3,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import TopBar from '@/components/TopBar';
-import JobCard from '@/components/JobCard';
 import CourseCard from '@/components/CourseCard';
-import JobDetail from '@/components/JobDetail';
 import { AnimatedCounter, FloatingParticles, PageTransition } from '@/lib/animations';
-import { getJobs, getCourses, getStats } from '@/lib/api';
-import type { Job, Course, PlatformStats } from '@/lib/types';
+import { getListings, getCourses, getStats } from '@/lib/api';
+import type { Listing, Course, PlatformStats } from '@/lib/types';
 import Link from 'next/link';
 
 export default function Home() {
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState('');
 
@@ -28,11 +25,11 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      getJobs().catch(() => []),
+      getListings().catch(() => []),
       getCourses().catch(() => []),
       getStats().catch(() => null),
-    ]).then(([jobsData, coursesData, statsData]) => {
-      setJobs(jobsData.slice(0, 5));
+    ]).then(([listingsData, coursesData, statsData]) => {
+      setListings(listingsData.slice(0, 5));
       setCourses(coursesData.slice(0, 4));
       setStats(statsData);
       setLoading(false);
@@ -121,7 +118,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Latest Jobs */}
+        {/* Latest Listings */}
         <section className="px-4 py-6">
           <motion.div
             initial={{ opacity: 0 }}
@@ -131,10 +128,10 @@ export default function Home() {
           >
             <div className="flex items-center gap-2">
               <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500" />
-              <h3 className="text-lg font-black text-zinc-900 dark:text-white">Ultime posizioni</h3>
+              <h3 className="text-lg font-black text-zinc-900 dark:text-white">Ultimi annunci</h3>
             </div>
-            <Link href="/jobs" className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 group">
-              Vedi tutte
+            <Link href="/listings" className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 group">
+              Vedi tutti
               <motion.span
                 className="inline-block"
                 animate={{ x: [0, 3, 0] }}
@@ -150,11 +147,77 @@ export default function Home() {
                 <div key={i} className={`skeleton rounded-2xl h-28 stagger-${i}`} />
               ))}
             </div>
+          ) : listings.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 p-6 text-center"
+            >
+              <p className="text-2xl mb-2">📋</p>
+              <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">Nessun annuncio ancora</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Pubblica il primo annuncio dalla community!</p>
+              <Link href="/publish">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  className="mt-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/25"
+                >
+                  Pubblica
+                </motion.button>
+              </Link>
+            </motion.div>
           ) : (
             <div className="space-y-3">
-              {jobs.map((job, i) => (
-                <JobCard key={job.id} job={job} onSelect={setSelectedJob} index={i} />
-              ))}
+              {listings.map((listing, i) => {
+                const isOffer = listing.listing_type === 'job_offer';
+                return (
+                  <motion.div
+                    key={listing.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                    className="rounded-2xl border border-zinc-200/80 bg-white p-4 transition-all hover:border-indigo-300/60 dark:border-zinc-800/80 dark:bg-zinc-900/80 card-shine group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-black text-white shadow-sm"
+                        style={{ background: `linear-gradient(135deg, ${listing.author_avatar_color || '#6366f1'}, ${listing.author_avatar_color || '#8b5cf6'})` }}
+                      >
+                        {(listing.author_name || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-semibold text-zinc-900 dark:text-white text-sm leading-tight truncate">
+                            {listing.title}
+                          </h3>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            isOffer
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400'
+                              : 'bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400'
+                          }`}>
+                            {isOffer ? '💼 Offerta' : '🧑‍💻 Richiesta'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          {listing.author_name}{listing.city ? ` · 📍 ${listing.city}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">{listing.description}</p>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      {listing.level && (
+                        <span className="rounded-full bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-0.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                          {listing.level.charAt(0).toUpperCase() + listing.level.slice(1)}
+                        </span>
+                      )}
+                      {listing.salary_min && listing.salary_max && (
+                        <span className="text-xs font-bold gradient-text">
+                          €{(listing.salary_min / 1000).toFixed(0)}K–€{(listing.salary_max / 1000).toFixed(0)}K
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
         </section>
@@ -265,8 +328,6 @@ export default function Home() {
         </section>
       </PageTransition>
 
-      {/* Job Detail Modal */}
-      {selectedJob && <JobDetail job={selectedJob} onClose={() => setSelectedJob(null)} />}
     </>
   );
 }

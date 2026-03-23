@@ -7,9 +7,9 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('user_id') || '1';
 
     const result = await db.execute({
-      sql: `SELECT n.*, u.username as actor_username, u.display_name as actor_name
+      sql: `SELECT n.*, au.username as actor_username, au.display_name as actor_name
             FROM notifications n
-            LEFT JOIN users u ON n.actor_id = u.id
+            LEFT JOIN auth_users au ON n.actor_id = au.id
             WHERE n.user_id = ?
             ORDER BY n.created_at DESC
             LIMIT 50`,

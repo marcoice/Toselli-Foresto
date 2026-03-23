@@ -68,7 +68,8 @@ export default function BottomNav() {
       initial={{ y: 80 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-200/50 glass-strong dark:border-zinc-800/50"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-200/50 bg-white/95 backdrop-blur-xl dark:bg-zinc-950/95 dark:border-zinc-800/50"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="mx-auto flex max-w-lg items-center justify-around">
         {navItems.map((item) => {
@@ -80,28 +81,6 @@ export default function BottomNav() {
               href={href}
               className="relative flex flex-1 flex-col items-center gap-0.5 py-2 pt-3"
             >
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.85 }}
-                className={`relative transition-colors duration-200 ${
-                  active
-                    ? 'text-indigo-600 dark:text-indigo-400'
-                    : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300'
-                }`}
-              >
-                {item.icon(active)}
-                {/* Show auth indicator dot if not logged in on Account item */}
-                {item.href === null && !user && (
-                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-indigo-500 border-2 border-white dark:border-zinc-950" />
-                )}
-              </motion.div>
-              <span className={`text-[10px] font-medium transition-colors duration-200 ${
-                active
-                  ? 'text-indigo-600 dark:text-indigo-400'
-                  : 'text-zinc-400 dark:text-zinc-500'
-              }`}>
-                {item.label}
-              </span>
               {active && (
                 <motion.div
                   layoutId="bottomNavIndicator"
@@ -109,6 +88,26 @@ export default function BottomNav() {
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
               )}
+              <motion.div
+                whileTap={{ scale: 0.85 }}
+                className={`relative transition-colors duration-200 ${
+                  active
+                    ? 'text-zinc-900 dark:text-white'
+                    : 'text-zinc-400 dark:text-zinc-500'
+                }`}
+              >
+                {item.icon(active)}
+                {item.href === null && !user && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-indigo-500 border-2 border-white dark:border-zinc-950" />
+                )}
+              </motion.div>
+              <span className={`text-[10px] font-medium transition-colors duration-200 ${
+                active
+                  ? 'text-zinc-900 dark:text-white'
+                  : 'text-zinc-400 dark:text-zinc-500'
+              }`}>
+                {item.label}
+              </span>
             </Link>
           );
         })}

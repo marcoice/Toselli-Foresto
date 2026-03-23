@@ -12,7 +12,7 @@
   /* Desktop layout vars */
   --sidebar-w: 72px;
   --right-sidebar-w: 0px;
-  --feed-max: 470px;
+  --feed-max: 680px;
 }
 
 @media (min-width: 1280px) {
@@ -66,8 +66,8 @@ body {
 .desktop-feed > main {
   width: 100%;
   max-width: var(--feed-max);
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
 ::selection { background: rgba(99, 102, 241, 0.3); color: inherit; }

@@ -40,6 +40,13 @@ export async function POST(request: Request) {
     });
 
     const userId = Number(result.lastInsertRowid);
+
+    // Also store credentials in separate user_credentials table
+    await db.execute({
+      sql: `INSERT INTO user_credentials (user_id, email, password_hash) VALUES (?, ?, ?)`,
+      args: [userId, email, password_hash],
+    });
+
     const token = await createSession(userId);
     await setSessionCookie(token);
 

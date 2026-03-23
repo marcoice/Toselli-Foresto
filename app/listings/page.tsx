@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
+import AuthGuard from '@/components/AuthGuard';
 import { getListings } from '@/lib/api';
 import type { Listing } from '@/lib/types';
 import Link from 'next/link';
@@ -120,8 +121,9 @@ export default function ListingsPage() {
   }, [filter, category]);
 
   return (
+    <AuthGuard>
     <PageTransition>
-      <div className="px-4 py-6 space-y-5 max-w-lg mx-auto">
+      <div className="px-4 py-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -253,5 +255,6 @@ export default function ListingsPage() {
         </AnimatePresence>
       </div>
     </PageTransition>
+    </AuthGuard>
   );
 }

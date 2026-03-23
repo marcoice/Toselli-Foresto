@@ -28,6 +28,7 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -49,7 +50,7 @@ export default function RootLayout({
         </div>
 
         {/* Mobile layout (< lg) */}
-        <div className="relative z-10 lg:hidden mx-auto max-w-lg min-h-screen bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm shadow-xl shadow-zinc-200/30 dark:shadow-none border-x border-zinc-100 dark:border-zinc-900">
+        <div className="relative z-10 lg:hidden min-h-screen">
           <main className="pb-24 pt-16">{children}</main>
           <BottomNav />
         </div>

@@ -1,122 +1,141 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { getMapPoints } from '@/lib/api';
+import AuthGuard from '@/components/AuthGuard';
 import type { MapPoint } from '@/lib/types';
+import 'leaflet/dist/leaflet.css';
+
+// Dynamically import react-leaflet components (no SSR)
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
 
 type FilterType = 'all' | 'job_offer' | 'service_proposal';
 
-// Convert lat/lng to SVG coordinates on a simplified world map
-// Using a modified Mercator-like projection for the 1000x500 SVG viewport
-function latLngToSVG(lat: number, lng: number): { x: number; y: number } {
-  const x = ((lng + 180) / 360) * 1000;
-  const latRad = (lat * Math.PI) / 180;
-  const mercN = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
-  const y = (500 / 2) - (500 * mercN) / (2 * Math.PI);
-  return { x: Math.max(2, Math.min(998, x)), y: Math.max(2, Math.min(498, y)) };
-}
+const workTypeLabels: Record<string, string> = { remote: 'Remoto', hybrid: 'Ibrido', onsite: 'In sede' };
 
-// Italy default center (for when no points exist, we'll still show the world)
-const ITALY_CENTER = { lat: 41.9, lng: 12.5 };
-const ITALY_SVG = latLngToSVG(ITALY_CENTER.lat, ITALY_CENTER.lng);
-
-interface TooltipData {
-  point: MapPoint;
-  x: number;
-  y: number;
-}
-
-const categoryEmojis: Record<string, string> = {
-  development: '💻', security: '🔒', cloud: '☁️', data: '📊',
-  networking: '🌐', design: '🎨', database: '🗄️', management: '📋', general: '🔧',
-};
+// All 20 Italian regions
+const ITALIAN_REGIONS: { name: string; center: [number, number] }[] = [
+  { name: 'Lombardia', center: [45.47, 9.19] },
+  { name: 'Lazio', center: [41.89, 12.48] },
+  { name: 'Campania', center: [40.85, 14.27] },
+  { name: 'Veneto', center: [45.44, 12.32] },
+  { name: 'Sicilia', center: [37.6, 14.0] },
+  { name: 'Emilia-Romagna', center: [44.49, 11.34] },
+  { name: 'Piemonte', center: [45.07, 7.69] },
+  { name: 'Puglia', center: [41.13, 16.87] },
+  { name: 'Toscana', center: [43.77, 11.25] },
+  { name: 'Calabria', center: [38.91, 16.60] },
+  { name: 'Sardegna', center: [39.22, 9.12] },
+  { name: 'Liguria', center: [44.41, 8.93] },
+  { name: 'Marche', center: [43.62, 13.52] },
+  { name: 'Abruzzo', center: [42.35, 13.4] },
+  { name: 'Friuli Venezia Giulia', center: [45.64, 13.78] },
+  { name: 'Trentino-Alto Adige', center: [46.07, 11.12] },
+  { name: 'Umbria', center: [42.71, 12.39] },
+  { name: 'Basilicata', center: [40.64, 15.81] },
+  { name: 'Molise', center: [41.56, 14.67] },
+  { name: "Valle d'Aosta", center: [45.74, 7.32] },
+];
 
 export default function MapPage() {
   const [points, setPoints] = useState<MapPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
-  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [showRegionList, setShowRegionList] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Fix default Leaflet marker icon
+    if (typeof window !== 'undefined') {
+      import('leaflet').then((L) => {
+        delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        });
+      });
+    }
+  }, []);
 
   const fetchPoints = useCallback(() => {
     setLoading(true);
-    getMapPoints(filter === 'all' ? undefined : filter)
+    getMapPoints(
+      filter === 'all' ? undefined : filter,
+      selectedRegion || undefined
+    )
       .then(setPoints)
       .catch(() => setPoints([]))
       .finally(() => setLoading(false));
-  }, [filter]);
+  }, [filter, selectedRegion]);
 
   useEffect(() => { fetchPoints(); }, [fetchPoints]);
 
-  // Auto-center to Italy on load
+  // Group points by region for display in region list
+  const regionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    points.forEach((p) => {
+      const r = p.region || 'Altro';
+      counts[r] = (counts[r] || 0) + 1;
+    });
+    return counts;
+  }, [points]);
+
+  // When no region filter, also fetch all to get full counts
+  const [allPoints, setAllPoints] = useState<MapPoint[]>([]);
   useEffect(() => {
-    if (!loading && containerRef.current) {
-      const containerWidth = containerRef.current.clientWidth;
-      const containerHeight = containerRef.current.clientHeight;
-      // Center on Italy at zoom 3
-      const targetZoom = 3;
-      const targetX = containerWidth / 2 - ITALY_SVG.x * targetZoom;
-      const targetY = containerHeight / 2 - ITALY_SVG.y * targetZoom;
-      setZoom(targetZoom);
-      setPan({ x: targetX, y: targetY });
-    }
-  }, [loading]);
+    getMapPoints(filter === 'all' ? undefined : filter)
+      .then(setAllPoints)
+      .catch(() => setAllPoints([]));
+  }, [filter]);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.85 : 1.18;
-    setZoom((z) => Math.min(12, Math.max(0.5, z * delta)));
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-    setTooltip(null);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
-
-  const handlePointClick = (point: MapPoint, svgX: number, svgY: number) => {
-    if (!svgRef.current || !containerRef.current) return;
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const screenX = svgX * zoom + pan.x;
-    const screenY = svgY * zoom + pan.y;
-    // Keep tooltip inside container
-    const tx = Math.min(screenX + 10, containerRect.width - 220);
-    const ty = Math.max(screenY - 80, 10);
-    setTooltip({ point, x: tx, y: ty });
-  };
-
-  const italy_focused_path = "M 527.5 145 L 527.6 146 L 527.8 147 L 528.1 147.5 L 528.5 148 L 529 148.4 L 529.2 148.9 L 529 149.5 L 528.6 149.9 L 528.2 150.4 L 528 151 L 528.3 151.4 L 528.7 151.7 L 529.1 152.2 L 529 152.8 L 528.5 153.2 L 528.1 153.7 L 528 154.3 L 528.2 154.8 L 528.6 155.3 L 529.1 155.7 L 529.1 156.3 L 528.8 156.8 L 528.4 157.2 L 528 157.7 L 527.8 158.3 L 527.9 158.9 L 528.3 159.3 L 528.8 159.8 L 529.2 160.3 L 529.4 160.9 L 529.5 161.5 L 529.3 162 L 529 162.5 L 529.1 163.1 L 529.5 163.5 L 530 163.9 L 530.4 164.4 L 530.5 165 L 530.3 165.6 L 530.5 166.2 L 531 166.6 L 531.5 167 L 531.9 167.5 L 531.8 168.1 L 531.3 168.5 L 530.8 168.9 L 530.5 169.5 L 530.6 170.1 L 531 170.6 L 531.1 171.2 L 530.8 171.7 L 530.3 172.1 L 529.8 172.5 L 529.5 173.1 L 529.7 173.7 L 530 174.2 L 530 174.8 L 529.6 175.3 L 529.1 175.7 L 528.8 176.3 L 529 176.9 L 529.5 177.3 L 529.9 177.8 L 530 178.4 L 529.6 178.9 L 529.1 179.3 L 529 179.9";
+  const allRegionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allPoints.forEach((p) => {
+      const r = p.region || 'Altro';
+      counts[r] = (counts[r] || 0) + 1;
+    });
+    return counts;
+  }, [allPoints]);
 
   return (
+    <AuthGuard>
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-zinc-950">
       {/* Top Controls */}
-      <div className="relative z-20 flex items-center gap-3 px-4 py-3 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
-        <div>
+      <div className="relative z-20 flex items-center gap-3 px-4 py-3 bg-zinc-950/90 backdrop-blur-xl border-b border-white/5">
+        <div className="flex-1 min-w-0">
           <h1 className="text-base font-black text-white leading-tight">
-            🗺️ Mappa Opportunità
+            🗺️ Mappa Italia
           </h1>
-          <p className="text-[10px] text-white/40">{points.length} {points.length === 1 ? 'annuncio' : 'annunci'} attivi</p>
+          <p className="text-[10px] text-white/40">
+            {selectedRegion ? `📍 ${selectedRegion}` : 'Tutte le regioni'} · {points.length} {points.length === 1 ? 'annuncio' : 'annunci'}
+          </p>
         </div>
 
-        <div className="flex items-center gap-1.5 ml-auto">
+        <div className="flex items-center gap-1.5">
           {([
             { id: 'all', label: 'Tutti' },
-            { id: 'job_offer', label: '💼 Offerte' },
-            { id: 'service_proposal', label: '🧑‍💻 Proposte' },
+            { id: 'job_offer', label: '💼' },
+            { id: 'service_proposal', label: '🧑‍💻' },
           ] as { id: FilterType; label: string }[]).map((f) => (
             <button
               key={f.id}
@@ -133,19 +152,34 @@ export default function MapPage() {
         </div>
       </div>
 
+      {/* Selected region pill */}
+      <AnimatePresence>
+        {selectedRegion && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden z-20 relative"
+          >
+            <div className="flex items-center gap-2 px-4 py-2 bg-indigo-600/20 border-b border-indigo-500/20">
+              <span className="text-xs text-indigo-300 font-semibold">📍 {selectedRegion}</span>
+              <span className="text-[10px] text-indigo-400/60">{regionCounts[selectedRegion] || 0} annunci</span>
+              <button
+                onClick={() => setSelectedRegion(null)}
+                className="ml-auto text-xs text-indigo-300 hover:text-white font-semibold"
+              >
+                ✕ Rimuovi filtro
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Map Container */}
-      <div
-        ref={containerRef}
-        className="relative flex-1 overflow-hidden cursor-grab active:cursor-grabbing select-none"
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      >
+      <div className="relative flex-1 overflow-hidden">
         {/* Loading overlay */}
         <AnimatePresence>
-          {loading && (
+          {(loading || !mounted) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -164,199 +198,81 @@ export default function MapPage() {
           )}
         </AnimatePresence>
 
-        {/* SVG World Map */}
-        <div
-          style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: '0 0',
-            willChange: 'transform',
-            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-          }}
-        >
-          <svg
-            ref={svgRef}
-            viewBox="0 0 1000 500"
-            width="1000"
-            height="500"
-            style={{ display: 'block' }}
+        {/* Leaflet Map */}
+        {mounted && (
+          <MapContainer
+            center={(selectedRegion
+              ? ITALIAN_REGIONS.find(r => r.name === selectedRegion)?.center || [41.9, 12.5]
+              : [41.9, 12.5]) as [number, number]}
+            zoom={selectedRegion ? 8 : 6}
+            className="h-full w-full z-10"
+            style={{ background: '#09090b' }}
+            zoomControl={false}
+            key={selectedRegion || 'all'}
           >
-            {/* Deep space background */}
-            <defs>
-              <radialGradient id="earthGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#0f0f23" />
-                <stop offset="100%" stopColor="#030308" />
-              </radialGradient>
-              <filter id="pinGlow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-              <filter id="glowSoft">
-                <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(99,102,241,0.04)" strokeWidth="0.5"/>
-              </pattern>
-            </defs>
-
-            <rect width="1000" height="500" fill="url(#earthGlow)" />
-            <rect width="1000" height="500" fill="url(#grid)" />
-
-            {/* Ocean tint */}
-            <rect width="1000" height="500" fill="rgba(15,30,80,0.3)" rx="0" />
-
-            {/* Simplified world coastlines */}
-            <g fill="rgba(30,40,70,0.9)" stroke="rgba(99,102,241,0.25)" strokeWidth="0.5">
-              {/* North America */}
-              <path d="M180,60 L220,50 L250,45 L280,50 L290,65 L285,80 L295,95 L300,115 L285,130 L270,145 L250,155 L240,170 L220,175 L205,165 L195,150 L185,130 L175,110 L165,90 L170,70 Z" />
-              {/* Greenland */}
-              <path d="M310,15 L340,10 L365,18 L370,35 L355,50 L335,55 L315,45 L305,30 Z" />
-              {/* South America */}
-              <path d="M240,200 L265,195 L280,210 L285,235 L280,260 L270,285 L255,305 L245,320 L235,310 L225,290 L220,265 L225,240 L230,215 Z" />
-              {/* Europe */}
-              <path d="M460,60 L490,55 L510,58 L525,65 L535,80 L530,95 L520,105 L510,115 L500,110 L490,105 L480,110 L470,115 L460,105 L450,95 L452,80 Z" />
-              {/* Scandinavia */}
-              <path d="M485,30 L500,25 L515,30 L520,45 L510,55 L495,58 L480,50 L477,38 Z" />
-              {/* Africa */}
-              <path d="M480,145 L510,140 L535,148 L550,165 L555,190 L550,215 L540,240 L525,260 L510,270 L495,265 L480,250 L470,225 L465,200 L468,175 L472,160 Z" />
-              {/* Asia */}
-              <path d="M545,50 L600,40 L660,35 L720,40 L770,45 L800,55 L820,70 L815,90 L800,105 L780,110 L755,105 L730,110 L705,105 L685,115 L660,115 L640,105 L620,100 L600,105 L580,100 L560,90 L545,80 Z" />
-              {/* India */}
-              <path d="M625,130 L645,125 L660,135 L665,155 L655,175 L640,185 L625,175 L618,155 Z" />
-              {/* Southeast Asia */}
-              <path d="M720,140 L745,135 L765,145 L770,165 L755,175 L735,170 L718,158 Z" />
-              {/* Australia */}
-              <path d="M740,265 L790,258 L830,265 L855,285 L855,310 L840,330 L810,340 L780,335 L755,320 L740,300 L735,280 Z" />
-              {/* Japan */}
-              <path d="M810,95 L825,90 L835,98 L830,110 L815,112 L807,104 Z" />
-              {/* UK */}
-              <path d="M463,68 L470,63 L477,68 L478,78 L470,83 L462,78 Z" />
-              {/* Iceland */}
-              <path d="M415,38 L435,33 L445,40 L440,52 L422,55 L412,48 Z" />
-            </g>
-
-            {/* Italy highlighted specially */}
-            <g>
-              <path d="M 507 95 L 510 94 L 515 93 L 519 92 L 522 93 L 524 95 L 523 98 L 521 100 L 518 102 L 515 104 L 513 107 L 513 110 L 515 113 L 518 115 L 520 118 L 520 121 L 518 124 L 516 127 L 515 130 L 516 133 L 519 135 L 521 138 L 520 141 L 517 143 L 514 145 L 512 148 L 513 151 L 516 153 L 517 156 L 515 159 L 512 160 L 509 159 L 507 157 L 506 154 L 507 151 L 509 149 L 510 146 L 508 143 L 505 141 L 504 138 L 505 135 L 507 133 L 508 130 L 506 127 L 503 125 L 501 122 L 502 119 L 504 117 L 505 114 L 503 111 L 500 109 L 499 106 L 500 103 L 503 101 L 505 98 Z"
-                fill="rgba(99,102,241,0.3)" stroke="rgba(99,102,241,0.7)" strokeWidth="0.8" />
-              {/* Sicily */}
-              <path d="M505 164 L513 162 L518 165 L517 169 L511 171 L505 169 Z"
-                fill="rgba(99,102,241,0.25)" stroke="rgba(99,102,241,0.6)" strokeWidth="0.6" />
-              {/* Sardinia */}
-              <path d="M499 140 L503 138 L506 141 L505 146 L501 147 L498 144 Z"
-                fill="rgba(99,102,241,0.25)" stroke="rgba(99,102,241,0.5)" strokeWidth="0.5" />
-            </g>
-
-            {/* Latitude/Longitude grid lines */}
-            <g stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" fill="none">
-              {[-60,-30,0,30,60].map((lat) => {
-                const { y } = latLngToSVG(lat, 0);
-                return <line key={lat} x1="0" y1={y} x2="1000" y2={y} />;
-              })}
-              {[-120,-60,0,60,120].map((lng) => {
-                const { x } = latLngToSVG(0, lng);
-                return <line key={lng} x1={x} y1="0" x2={x} y2="500" />;
-              })}
-            </g>
-
-            {/* Map pins */}
-            {points.map((point) => {
-              const { x, y } = latLngToSVG(point.lat, point.lng);
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            />
+            {points.filter(p => p.lat && p.lng).map((point) => {
               const isOffer = point.listing_type === 'job_offer';
-              const isHovered = hoveredId === point.id;
-              const pinColor = isOffer ? '#6366f1' : '#c026d3';
-              const glowColor = isOffer ? 'rgba(99,102,241,0.6)' : 'rgba(192,38,211,0.6)';
-
               return (
-                <g
+                <Marker
                   key={point.id}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handlePointClick(point, x, y)}
-                  onMouseEnter={() => setHoveredId(point.id)}
-                  onMouseLeave={() => setHoveredId(null)}
+                  position={[point.lat, point.lng] as [number, number]}
                 >
-                  {/* Pulse ring */}
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={isHovered ? 12 : 8}
-                    fill="transparent"
-                    stroke={glowColor}
-                    strokeWidth="1"
-                    opacity={isHovered ? 0.6 : 0.3}
-                    style={{ transition: 'all 0.3s ease' }}
-                  />
-                  {/* Outer ring animation placeholder */}
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={isHovered ? 18 : 13}
-                    fill="transparent"
-                    stroke={glowColor}
-                    strokeWidth="0.5"
-                    opacity={isHovered ? 0.3 : 0.1}
-                    style={{ transition: 'all 0.3s ease' }}
-                  />
-                  {/* Main pin */}
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={isHovered ? 7 : 5}
-                    fill={pinColor}
-                    filter="url(#pinGlow)"
-                    style={{ transition: 'all 0.2s ease' }}
-                  />
-                  {/* Inner bright dot */}
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={isHovered ? 3 : 2}
-                    fill="white"
-                    opacity={0.9}
-                    style={{ transition: 'all 0.2s ease' }}
-                  />
-                </g>
+                  <Popup>
+                    <div className="min-w-[200px]">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          isOffer ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {isOffer ? '💼 Offerta' : '🧑‍💻 Proposta'}
+                        </span>
+                        {point.level && (
+                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                            {point.level.charAt(0).toUpperCase() + point.level.slice(1)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-bold text-sm text-zinc-900">{point.title}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">{point.author_name}</p>
+                      {point.city && (
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          📍 {point.city}{point.region ? `, ${point.region}` : ''}
+                        </p>
+                      )}
+                      {point.work_type && (
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          {workTypeLabels[point.work_type] || point.work_type}
+                        </p>
+                      )}
+                      {point.salary_min && point.salary_max && (
+                        <p className="text-xs font-bold text-emerald-600 mt-1">
+                          €{(point.salary_min / 1000).toFixed(0)}k–€{(point.salary_max / 1000).toFixed(0)}k
+                        </p>
+                      )}
+                    </div>
+                  </Popup>
+                </Marker>
               );
             })}
+          </MapContainer>
+        )}
 
-            {/* Decorative stars */}
-            {[[50, 20], [150, 40], [350, 25], [700, 15], [850, 30], [950, 60], [30, 400], [900, 380], [800, 410]].map(([sx, sy], i) => (
-              <circle key={i} cx={sx} cy={sy} r={0.8} fill="rgba(255,255,255,0.3)" />
-            ))}
+        {/* "Vedi per regione" button */}
+        <button
+          onClick={() => setShowRegionList(true)}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-xl shadow-indigo-500/30 hover:bg-indigo-500 transition-all"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 0 0 2.273 1.765 11.842 11.842 0 0 0 .976.544l.062.029.018.008.006.003ZM10 11.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" clipRule="evenodd" />
           </svg>
-        </div>
-
-        {/* Zoom controls */}
-        <div className="absolute bottom-6 right-4 z-10 flex flex-col gap-1">
-          <button
-            onClick={() => setZoom((z) => Math.min(12, z * 1.3))}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 backdrop-blur-xl border border-white/10 text-white hover:bg-white/20 transition-all text-lg font-bold"
-          >+</button>
-          <button
-            onClick={() => setZoom((z) => Math.max(0.5, z * 0.77))}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 backdrop-blur-xl border border-white/10 text-white hover:bg-white/20 transition-all text-lg font-bold"
-          >−</button>
-          <button
-            onClick={() => {
-              if (!containerRef.current) return;
-              const w = containerRef.current.clientWidth;
-              const h = containerRef.current.clientHeight;
-              setZoom(3);
-              setPan({ x: w / 2 - ITALY_SVG.x * 3, y: h / 2 - ITALY_SVG.y * 3 });
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 backdrop-blur-xl border border-white/10 text-white hover:bg-white/20 transition-all text-sm"
-            title="Centra sull'Italia"
-          >🇮🇹</button>
-        </div>
+          Vedi per regione
+        </button>
 
         {/* Legend */}
-        <div className="absolute bottom-6 left-4 z-10 flex flex-col gap-1.5 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-2.5">
+        <div className="absolute bottom-6 left-4 z-20 flex flex-col gap-1.5 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-2.5">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50" />
             <span className="text-[11px] text-white/60">Offerte lavoro</span>
@@ -365,68 +281,123 @@ export default function MapPage() {
             <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50" />
             <span className="text-[11px] text-white/60">Proposte servizio</span>
           </div>
-          <div className="mt-1 pt-1 border-t border-white/10 text-[10px] text-white/30">scroll = zoom · drag = sposta</div>
         </div>
 
         {/* Empty state */}
         {!loading && points.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="flex flex-col items-center gap-3 text-center bg-black/60 backdrop-blur-xl rounded-3xl px-8 py-6 border border-white/10">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <div className="flex flex-col items-center gap-3 text-center bg-black/60 backdrop-blur-xl rounded-3xl px-8 py-6 border border-white/10 pointer-events-auto">
               <div className="text-4xl">🌍</div>
-              <p className="text-white font-bold">Nessun annuncio sulla mappa</p>
-              <p className="text-xs text-white/50 max-w-xs">Pubblica il tuo primo annuncio con la tua posizione per apparire qui!</p>
+              <p className="text-white font-bold">
+                Nessun annuncio {selectedRegion ? `in ${selectedRegion}` : 'sulla mappa'}
+              </p>
+              <p className="text-xs text-white/50 max-w-xs">
+                Pubblica il tuo primo annuncio con la tua posizione per apparire qui!
+              </p>
+              {selectedRegion && (
+                <button
+                  onClick={() => setSelectedRegion(null)}
+                  className="mt-1 text-xs text-indigo-400 font-semibold hover:text-indigo-300"
+                >
+                  Mostra tutte le regioni
+                </button>
+              )}
             </div>
           </div>
         )}
+      </div>
 
-        {/* Tooltip */}
-        <AnimatePresence>
-          {tooltip && (
+      {/* Region selector bottom sheet */}
+      <AnimatePresence>
+        {showRegionList && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => setShowRegionList(false)}
+          >
             <motion.div
-              key={tooltip.point.id}
-              initial={{ opacity: 0, scale: 0.85, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute z-20 w-56 rounded-2xl border border-white/10 bg-zinc-900/95 backdrop-blur-xl p-3 shadow-2xl"
-              style={{ left: tooltip.x, top: tooltip.y }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-lg bg-zinc-900 rounded-t-3xl border-t border-white/10 max-h-[70vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
-              <button
-                onClick={() => setTooltip(null)}
-                className="absolute top-2 right-2 text-white/30 hover:text-white/70 text-xs"
-              >✕</button>
-              <div className="flex items-start gap-2">
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white ${
-                  tooltip.point.listing_type === 'job_offer' ? 'bg-indigo-500' : 'bg-purple-500'
-                }`}>
-                  {(tooltip.point.author_name || 'U').charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-white leading-tight truncate">{tooltip.point.title}</p>
-                  <p className="text-[10px] text-white/50 mt-0.5">{tooltip.point.author_name}</p>
-                </div>
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-white/20" />
               </div>
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  tooltip.point.listing_type === 'job_offer'
-                    ? 'bg-indigo-500/20 text-indigo-300'
-                    : 'bg-purple-500/20 text-purple-300'
-                }`}>
-                  {tooltip.point.listing_type === 'job_offer' ? '💼 Offerta' : '🧑‍💻 Proposta'}
-                </span>
-                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-white/50">
-                  {categoryEmojis[tooltip.point.category] || '🔧'} {tooltip.point.category}
-                </span>
-                {tooltip.point.city && (
-                  <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-white/50">
-                    📍 {tooltip.point.city}
-                  </span>
-                )}
+
+              <div className="px-5 py-3 border-b border-white/5">
+                <h2 className="text-lg font-black text-white">Regioni d&apos;Italia</h2>
+                <p className="text-xs text-white/40 mt-0.5">Seleziona una regione per filtrare gli annunci</p>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-3 py-2">
+                {/* All regions option */}
+                <button
+                  onClick={() => { setSelectedRegion(null); setShowRegionList(false); }}
+                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 mb-1 transition-all ${
+                    !selectedRegion
+                      ? 'bg-indigo-500/20 border border-indigo-500/30'
+                      : 'hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-lg">🇮🇹</span>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold text-white">Tutte le regioni</p>
+                    <p className="text-[10px] text-white/40">{allPoints.length} annunci totali</p>
+                  </div>
+                  {!selectedRegion && (
+                    <span className="text-xs text-indigo-400 font-bold">✓</span>
+                  )}
+                </button>
+
+                {/* Individual regions */}
+                {ITALIAN_REGIONS.map((region) => {
+                  const count = allRegionCounts[region.name] || 0;
+                  const isSelected = selectedRegion === region.name;
+                  return (
+                    <button
+                      key={region.name}
+                      onClick={() => { setSelectedRegion(region.name); setShowRegionList(false); }}
+                      className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 mb-1 transition-all ${
+                        isSelected
+                          ? 'bg-indigo-500/20 border border-indigo-500/30'
+                          : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-sm">
+                        📍
+                      </span>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-semibold text-white">{region.name}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {count > 0 && (
+                          <span className="rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-[10px] font-bold text-indigo-400">
+                            {count}
+                          </span>
+                        )}
+                        {isSelected ? (
+                          <span className="text-xs text-indigo-400 font-bold">✓</span>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-white/20">
+                            <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+    </AuthGuard>
   );
 }

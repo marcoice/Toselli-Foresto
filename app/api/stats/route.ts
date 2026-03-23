@@ -3,15 +3,15 @@ import db from '@/lib/db';
 
 export async function GET() {
   try {
-    const [jobsRes, coursesRes, usersRes, badgesRes] = await Promise.all([
-      db.execute('SELECT COUNT(*) as count FROM jobs'),
+    const [listingsRes, coursesRes, usersRes, badgesRes] = await Promise.all([
+      db.execute('SELECT COUNT(*) as count FROM listings WHERE is_active = 1').catch(() => ({ rows: [{ count: 0 }] })),
       db.execute('SELECT COUNT(*) as count FROM courses'),
-      db.execute('SELECT COUNT(*) as count FROM users'),
+      db.execute('SELECT COUNT(*) as count FROM auth_users').catch(() => db.execute('SELECT COUNT(*) as count FROM users')),
       db.execute('SELECT COUNT(*) as count FROM user_badges'),
     ]);
 
     return NextResponse.json({
-      jobs: jobsRes.rows[0].count,
+      jobs: listingsRes.rows[0].count,
       courses: coursesRes.rows[0].count,
       users: usersRes.rows[0].count,
       badges_awarded: badgesRes.rows[0].count,

@@ -4,17 +4,23 @@ import db from '@/lib/db';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const type = searchParams.get('type'); // job_offer | service_proposal | null (both)
+    const type = searchParams.get('type');
+    const region = searchParams.get('region');
 
-    let sql = `SELECT l.id, l.lat, l.lng, l.listing_type, l.title, l.city, l.category,
-               au.display_name as author_name, au.role as author_role
+    let sql = `SELECT l.id, l.lat, l.lng, l.listing_type, l.title, l.city, l.region, l.category,
+               l.description, l.level, l.work_type, l.salary_min, l.salary_max,
+               au.display_name as author_name, au.role as author_role, au.avatar_color as author_avatar_color
                FROM listings l JOIN auth_users au ON l.author_id = au.id
-               WHERE l.is_active = 1 AND l.lat IS NOT NULL AND l.lng IS NOT NULL`;
+               WHERE l.is_active = 1`;
     const args: string[] = [];
 
     if (type) {
       sql += ' AND l.listing_type = ?';
       args.push(type);
+    }
+    if (region) {
+      sql += ' AND l.region = ?';
+      args.push(region);
     }
 
     sql += ' ORDER BY l.created_at DESC';
